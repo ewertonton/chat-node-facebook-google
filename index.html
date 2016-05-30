@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Facebook Login JavaScript Example</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(151, 221, 236); border: none; padding: 10px; }
+      #form { display:none }
+	  #messages { list-style-type: none; margin: 0,0,30,500; padding: 0; display:block; }
+      #messages li { padding: 5px 10px; background: #ddd;}
+      #messages li:nth-child(odd) { background: #eee; }
+	  #picture { width: 50px; border-radius: 50%; }
+    </style>
+    <meta name="google-signin-scope" content="profile email">
+    <meta name="google-signin-client_id" content="952407199532-vmd3fc3icuo99clri0atof1j8ieetirl.apps.googleusercontent.com">
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+<meta charset="UTF-8">
+</head>
+<body>
+<script>
+
+	// Função chamada pelo botão do Facebook.
+	window.fbAsyncInit = function() {
+		FB.init({
+			appId      : '1109186095758076',
+			cookie     : true,  // enable cookies to allow the server to access the session
+			xfbml      : true,  // parse social plugins on this page
+			version    : 'v2.6' // use version 2.2
+		});
+		
+		FB.getLoginStatus(function(response) {
+			checaFacebookStatus(response);
+		});
+	
+	};
+
+	// Load the SDK asynchronously
+	(function(d, s, id) {
+		var js, fjs = d.getElementsByTagName(s)[0];
+		if (d.getElementById(id)) return;
+		js = d.createElement(s); js.id = id;
+		js.src = "//connect.facebook.net/en_US/sdk.js";
+		fjs.parentNode.insertBefore(js, fjs);
+	}(document, 'script', 'facebook-jssdk'));
+	
+	// Resultado da função FB.getLoginStatus().
+	function checaFacebookStatus(response) {
+		console.log('checaFacebookStatus');
+		// Checa o login do Facebook
+		if (response.status === 'connected') {
+		  // Pega os dados de login do Facebook.
+		  facebookLoged();
+		} else if (response.status === 'not_authorized') {
+		  // A pessoa está logada no Facebook mas não no aplicativo.
+		  document.getElementById('status').innerHTML = 'Por favor, entre na sua conta Facebook ou G+.';
+		} else {
+		  // A pessoa não está logada no Facebook.
+		  document.getElementById('status').innerHTML = 'Por favor, entre na sua conta Facebook ou G+.';
+		}
+	}
+	
+	// Função chamada quando o login no Facebook é feito.
+	function facebookLoged() {
+		console.log('LOGADO NO FACE');
+		FB.api('/me', function(response) {
+			user.name = response.name;
+			user.id = response.id;
+			// Pede a imagem do usuário
+			getImage(user);
+		});
+	
+	}
+  
+	// Pede a imagem do usuário no Facebook.
+	function getImage(_user){
+		console.log('getImage');
+		FB.api('/me/picture', function (response) {
+			if (response && !response.error) {
+				_user.image = response.data.url;
+				onSigned();
+			}
+		});  
+	}
+	
+	// Checa o login do Facebook
+    function checkLoginState() {
+		console.log('checkLoginState');
+		FB.getLoginStatus(function(response) {
+			checaFacebookStatus(response);
+		});
+	}
+	
+	// Quando está logado no G+
+	function onSignIn(googleUser) {
+		console.log('onSignIn');
+		// Dados do Google
+		var profile = googleUser.getBasicProfile();
+		console.log("ID: " + profile.getId());
+		console.log('Full Name: ' + profile.getName());
+		console.log('Given Name: ' + profile.getGivenName());
+		console.log('Family Name: ' + profile.getFamilyName());
+		console.log("Image URL: " + profile.getImageUrl());
+		console.log("Email: " + profile.getEmail());
+		
+		user.id = profile.getId();
+		user.name = profile.getName();
+		user.image = profile.getImageUrl();
+		// ID token necessário:
+		var id_token = googleUser.getAuthResponse().id_token;
+		console.log("ID Token: " + id_token);
+		onSigned();
+	};
+		  
+	function onSigned() {
+		console.log('onSigned');
+		document.getElementById('status').style.display = 'none';
+		document.getElementById('loginForm').style.display = 'none';
+		document.getElementById('messages').style.display = 'block';
+		document.getElementById('form').style.display = 'block';
+		socket.emit('chat join', user);
+	}
+</script>
+<div id="status">Por favor, entre na sua conta Facebook ou G+.</div>
+<div id="loginForm">
+     <fb:login-button scope="public_profile,email" onlogin="checkLoginState();" id="login">
+  <!--  <fb:login-button scope="public_profile,email" id="login"> -->
+    </fb:login-button>
+    <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
+    
+</div>
+
+
+<div id="messages">
+    <ul></ul>
+    <form action="" id="form">
+      <input id="m" autocomplete="off" /><button>Enviar Mensagem</button>
+    </form>
+</div>
+</body>
+<script src="https://cdn.socket.io/socket.io-1.2.0.js"></script>
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <script>
+    // Seta o socket
+    var socket = io();
+    var user = {};
+    // Envia 
+    $('form').submit(function(){
+      var newMsg = '<img id="picture" src="' + user.image + '"/><strong><font color="#6600ff">' + user.name + '</font><font color="#ff0000">  disse: </font></strong><i>' + $('#m').val() +'</i>';
+      socket.emit('chat message', newMsg);
+      $('#m').val('');
+      return false;
+    });
+
+    socket.on('chat message', function(msg){
+      $('#messages').append($('<li>').html(msg));
+    });
+
+    
+
+  </script>
+</html>
